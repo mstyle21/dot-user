@@ -1,99 +1,227 @@
 <?php
 /**
- * @see https://github.com/dotkernel/dot-user/ for the canonical source repository
- * @copyright Copyright (c) 2017 Apidemia (https://www.apidemia.com)
- * @license https://github.com/dotkernel/dot-user/blob/master/LICENSE.md MIT License
+ * see https://github.com/dotkernel/dot-user/ for the canonical source repository
+ * copyright Copyright (c) 2017 Apidemia (https://www.apidemia.com)
+ * license https://github.com/dotkernel/dot-user/blob/master/LICENSE.md MIT License
  */
 
-declare(strict_types = 1);
+namespace Dot\User\Entity;
 
-namespace Dot\User\Service;
+use DateTime;
+use Doctrine\Common\Collections\ArrayCollection;
+use Dot\Authentication\Identity\IdentityInterface as AuthenticationIdentity;
+use Dot\Authorization\Identity\IdentityInterface as AuthorizationIdentity;
+use Doctrine\ORM\Mapping as ORM;
 
-use Doctrine\DBAL\LockMode;
-use Dot\Doctrine\Mapper\EntityManagerAwareInterface;
-use Dot\Doctrine\Mapper\EntityManagerAwareTrait;
-use Dot\Mapper\Mapper\MapperManagerAwareInterface;
-use Dot\Mapper\Mapper\MapperManagerAwareTrait;
-use Dot\User\Entity\ResetTokenEntity;
-use Dot\User\Entity\UserEntity;
+use Dot\Mapper\Entity\Entity;
 use Dot\User\Entity\UserEntityRepository;
-use Dot\User\Event\DispatchUserEventsTrait;
-use Dot\User\Event\TokenEventListenerInterface;
-use Dot\User\Event\TokenEventListenerTrait;
-use Dot\User\Event\UserEvent;
-use Dot\User\Event\UserEventListenerInterface;
-use Dot\User\Event\UserEventListenerTrait;
-use Dot\User\Mapper\UserMapperInterface;
-use Dot\User\Options\MessagesOptions;
-use Dot\User\Options\UserOptions;
-use Dot\User\Result\ErrorCode;
-use Dot\User\Result\Result;
-use Zend\Crypt\Password\PasswordInterface;
-use Zend\EventManager\EventManagerInterface;
 
 /**
- * Class UserService
- * @package Dot\User\Service
+ * Class UserEntity
+ * @package Dot\User\Entity
+ * @ORM\Table("user")
+ * @ORM\Entity(repositoryClass="UserEntityRepository")
  */
-class UserDoctrineService extends UserService implements
-    UserServiceInterface,
-    UserEventListenerInterface,
-    TokenEventListenerInterface,
-    EntityManagerAwareInterface
+class UserEntity extends Entity implements
+    AuthenticationIdentity,
+    AuthorizationIdentity,
+    \JsonSerializable
 {
-    use EntityManagerAwareTrait;
-    /*
-    use DispatchUserEventsTrait;
-
-    use UserEventListenerTrait,
-        TokenEventListenerTrait {
-        UserEventListenerTrait::attach as userEventAttach;
-        TokenEventListenerTrait::attach as tokenEventAttach;
-        UserEventListenerTrait::detach as userEventDetach;
-        TokenEventListenerTrait::detach as tokenEventDetach;
-    }/**/
-
-    /** @var  UserOptions */
-    protected $userOptions;
-
-    /** @var  TokenServiceInterface */
-    protected $tokenService;
-
-    /** @var  PasswordInterface */
-    protected $passwordService;
+    const STATUS_PENDING = 'pending';
+    const STATUS_ACTIVE = 'active';
+    const STATUS_INACTIVE = 'inactive';
+    const STATUS_DELETED = 'deleted';
 
     /**
-     * UserService constructor.
-     * @param TokenServiceInterface $tokenService
-     * @param PasswordInterface $passwordService
-     * @param UserOptions $userOptions
+     * @ORM\Id
+     * @ORM\Column(type="integer")
+     * @ORM\GeneratedValue
      */
-    public function __construct(
-        TokenServiceInterface $tokenService,
-        PasswordInterface $passwordService,
-        UserOptions $userOptions
-    ) {
-        $this->tokenService = $tokenService;
-        $this->userOptions = $userOptions;
-        $this->passwordService = $passwordService;
+    protected $id;
+
+    /**
+     * @ORM\Column(type="string")
+     * @var string
+     */
+    protected $email;
+
+    /**
+     * @ORM\Column(type="string")
+     * @var string
+     */
+    protected $username;
+
+    /**
+     * @ORM\Column(type="string")
+     * @var string
+     */
+    protected $password;
+
+    /**
+     * @ORM\Column(type="string")
+     * @var string
+     */
+    protected $status;
+
+    /**
+     * @ORM\Column(type="datetime")
+     * @var DateTime
+     */
+    protected $dateCreated;
+
+    /**
+     * @ORM\ManyToMany(targetEntity="RoleEntity", fetch="EAGER")
+     * @ORM\JoinTable(
+     *     name="user_roles",
+     *     joinColumns={@ORM\JoinColumn(name="userId", referencedColumnName="id")},
+     *     inverseJoinColumns={@ORM\JoinColumn(name="roleId", referencedColumnName="id")})
+     * @var array
+     */
+    protected $roles;
+
+    /**
+     * @return mixed
+     */
+    public function getRoles(): array
+    {
+        return $this->roles->toArray() ?? [];
     }
 
-    public function find($id, array $options = []): ?UserEntity
+
+    /**
+     * @return mixed
+     */
+    public function getId()
     {
-        $id = (int)$id;
-        /** @var UserEntityRepository $repository */
-        $repository = $this->entityManager->getRepository(UserEntity::class);
-        return $repository->getUser($id);
+        return $this->id;
     }
 
-    public function findByEmail(string $email, array $options = []): ?UserEntity
+    /**
+     * @param mixed $id
+     */
+    public function setId($id): void
     {
-        return $this->entityManager->getRepository(UserEntity::class)->findBy(['email' => $email], null, 1);
+        $this->id = $id;
     }
-    /*
-    public function delete(UserEntity $user)
+
+    /**
+     * @return string
+     */
+    public function getEmail(): string
     {
-        $this->entityManager->remove($user);
-        $this->entityManager->flush();
-    }//*/
+        return $this->email;
+    }
+
+    /**
+     * @param string $email
+     */
+    public function setEmail(string $email): void
+    {
+        $this->email = $email;
+    }
+
+    /**
+     * @return string
+     */
+    public function getUsername(): string
+    {
+        return $this->username;
+    }
+
+    /**
+     * @param string $username
+     */
+    public function setUsername(string $username): void
+    {
+        $this->username = $username;
+    }
+
+    /**
+     * @return string
+     */
+    public function getPassword():? string
+    {
+        return $this->password;
+    }
+
+    /**
+     * @param string $password
+     */
+    public function setPassword(string $password): void
+    {
+        $this->password = $password;
+    }
+
+    /**
+     * @return string
+     */
+    public function getStatus(): string
+    {
+        return $this->status;
+    }
+
+    /**
+     * @param string $status
+     */
+    public function setStatus(string $status): void
+    {
+        $this->status = $status;
+    }
+
+    /**
+     * @return string
+     */
+    public function getDateCreated(): DateTime
+    {
+        return $this->dateCreated;
+    }
+
+    /**
+     * @param string $dateCreated
+     */
+    public function setDateCreated(DateTime $dateCreated): void
+    {
+        $this->dateCreated = $dateCreated;
+    }
+
+    /**
+     * @return string
+     */
+    public function getName(): string
+    {
+        if ($this->username) {
+            return $this->username;
+        }
+        return $this->email ?? '';
+    }
+
+    /**
+     * @return string
+     */
+    public function __toString(): string
+    {
+        return $this->getUsername();
+    }
+
+
+    public function __construct()
+    {
+        $this->roles = new ArrayCollection();
+    }
+
+    /**
+     * @return array
+     */
+    public function jsonSerialize(): array
+    {
+        return [
+            'id' => $this->getId(),
+            'username' => $this->getUsername(),
+            'email' => $this->getEmail(),
+            'password' => $this->getPassword(),
+            'roles' => $this->getRoles(),
+            'status' => $this->getStatus(),
+            'dateCreated' => $this->getDateCreated()
+        ];
+    }
 }
