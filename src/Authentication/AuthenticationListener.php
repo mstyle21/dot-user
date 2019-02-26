@@ -91,7 +91,6 @@ class AuthenticationListener extends AbstractAuthenticationEventListener
         $authenticationService = $e->getParam('authenticationService');
 
         $identity = $result->getIdentity();
-
         $user = $this->userService->find($identity->getId());
         if ($user instanceof UserEntity) {
             $e->setParam('user', $user);

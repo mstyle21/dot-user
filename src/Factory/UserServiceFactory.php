@@ -9,7 +9,6 @@ declare(strict_types = 1);
 
 namespace Dot\User\Factory;
 
-use Dot\User\Entity\UserEntity;
 use Dot\User\Event\UserEventListenerInterface;
 use Dot\User\Exception\RuntimeException;
 use Dot\User\Options\UserOptions;

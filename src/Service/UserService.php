@@ -9,8 +9,6 @@ declare(strict_types = 1);
 
 namespace Dot\User\Service;
 
-use Dot\Doctrine\Mapper\EntityManagerAwareInterface;
-use Dot\Doctrine\Mapper\EntityManagerAwareTrait;
 use Dot\Mapper\Mapper\MapperManagerAwareInterface;
 use Dot\Mapper\Mapper\MapperManagerAwareTrait;
 use Dot\User\Entity\ResetTokenEntity;
@@ -37,12 +35,10 @@ class UserService implements
     UserServiceInterface,
     MapperManagerAwareInterface,
     UserEventListenerInterface,
-    TokenEventListenerInterface,
-    EntityManagerAwareInterface
+    TokenEventListenerInterface
 {
     use MapperManagerAwareTrait;
     use DispatchUserEventsTrait;
-    use EntityManagerAwareTrait;
     use UserEventListenerTrait,
         TokenEventListenerTrait {
         UserEventListenerTrait::attach as userEventAttach;
@@ -84,7 +80,6 @@ class UserService implements
     public function find($id, array $options = []): ?UserEntity
     {
         /** @var UserMapperInterface $mapper */
-
         $mapper = $this->getMapperManager()->get($this->userOptions->getUserEntity());
         return $mapper->get($id, $options);
     }
@@ -455,6 +450,7 @@ class UserService implements
                 if ($event->stopped()) {
                     return $event->last();
                 }
+
                 $user->setPassword($this->passwordService->create($newPassword));
                 $r = $mapper->save($user);
                 if ($r) {
@@ -544,6 +540,7 @@ class UserService implements
             // if the user confirm token fails to be created, it will rollback the registration
             // this certainly could have been implemented in more than one way
             $mapper->beginTransaction();
+
             $user->setPassword($this->passwordService->create($user->getPassword()));
             $user->setStatus($this->userOptions->getRegisterOptions()->getDefaultUserStatus());
 

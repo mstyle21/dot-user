@@ -7,6 +7,8 @@
 
 namespace Dot\User;
 
+use Doctrine\ORM\Mapping\Driver\AnnotationDriver;
+use Doctrine\ORM\Mapping\EntityListenerResolver;
 use Dot\Mapper\Factory\DbMapperFactory;
 use Dot\User\Authentication\AuthenticationListener;
 use Dot\User\Authentication\InjectLoginForm;
@@ -25,7 +27,6 @@ use Dot\User\Factory\PasswordCheckFactory;
 use Dot\User\Factory\TokenServiceFactory;
 use Dot\User\Factory\UserControllerFactory;
 use Dot\User\Factory\UserDbMapperFactory;
-use Dot\User\Factory\UserDoctrineServiceFactory;
 use Dot\User\Factory\UserFieldsetFactory;
 use Dot\User\Factory\UserOptionsFactory;
 use Dot\User\Factory\UserServiceFactory;
@@ -44,9 +45,11 @@ use Dot\User\Options\UserOptions;
 use Dot\User\Service\PasswordCheck;
 use Dot\User\Service\TokenService;
 use Dot\User\Service\TokenServiceInterface;
-use Dot\User\Service\UserDoctrineService;
 use Dot\User\Service\UserService;
 use Dot\User\Service\UserServiceInterface;
+use Ramsey\Uuid\Doctrine\UuidBinaryOrderedTimeType;
+use Ramsey\Uuid\Doctrine\UuidBinaryType;
+use Ramsey\Uuid\Doctrine\UuidType;
 use Zend\Crypt\Password\PasswordInterface;
 
 /**
@@ -59,7 +62,7 @@ class ConfigProvider
     {
         return [
             'dependencies' => $this->getDependenciesConfig(),
-
+            'doctrine' => $this->getDoctrineConfig(),
             'templates' => [
                 'paths' => [
                     'dot-user-form' => [realpath(__DIR__ . '/../templates/dot-user-form')],
@@ -90,6 +93,7 @@ class ConfigProvider
                 'register_options' => [],
                 'template_options' => [],
             ],
+            
 
             'dot_mapper' => [
                 'mapper_manager' => [
@@ -134,6 +138,65 @@ class ConfigProvider
         ];
     }
 
+    public function getDoctrineConfig()
+    {
+        return [
+            'connection' => [
+                'orm_default' => [
+                    'doctrine_mapping_types' => [
+                        UuidBinaryType::NAME => 'binary',
+                        UuidBinaryOrderedTimeType::NAME => 'binary',
+                    ]
+                ],
+            ],
+            'configuration' => [
+                'orm_default' => [
+                    'entity_listener_resolver' => EntityListenerResolver::class,
+                    'numeric_functions' => [
+                        'RAND' => Rand::class,
+                    ]
+                ]
+            ],
+            'driver' => [
+                'orm_default' => [
+                    'drivers' => [
+                        'Dot\\User\\Entity' => 'UserEntities',
+                    ]
+                ],
+                'ContactEntities' => [
+                    'class' => AnnotationDriver::class,
+                    'cache' => 'array',
+                    'paths' => __DIR__ . '/Contact/Entity',
+                ],
+                'ProjectEntities' => [
+                    'class' => AnnotationDriver::class,
+                    'cache' => 'array',
+                    'paths' => __DIR__ . '/Project/Entity',
+                ],
+                'UserEntities' => [
+                    'class' => AnnotationDriver::class,
+                    'cache' => 'array',
+                    'paths' => __DIR__ . '/User/Entity',
+                ],
+                'CompanyEntities' => [
+                    'class' => AnnotationDriver::class,
+                    'cache' => 'array',
+                    'paths' => __DIR__ . '/Company/Entity',
+                ],
+                'QuestionEntities' => [
+                    'class' => AnnotationDriver::class,
+                    'cache' => 'array',
+                    'paths' => __DIR__ . '/Question/Entity',
+                ]
+            ],
+            'types' => [
+                UuidType::NAME => UuidType::class,
+                UuidBinaryType::NAME => UuidBinaryType::class,
+                UuidBinaryOrderedTimeType::NAME => UuidBinaryOrderedTimeType::class,
+            ]
+        ];
+    }
+
     public function getDependenciesConfig()
     {
         return [
@@ -144,7 +207,6 @@ class ConfigProvider
                 UserOptions::class => UserOptionsFactory::class,
                 UserController::class => UserControllerFactory::class,
                 UserService::class => UserServiceFactory::class,
-                UserDoctrineService::class => UserDoctrineServiceFactory::class,
                 TokenService::class => TokenServiceFactory::class,
 
                 AutoLogin::class => AutoLoginFactory::class,
@@ -152,8 +214,7 @@ class ConfigProvider
                 AuthenticationListener::class => AuthenticationListenerFactory::class,
             ],
             'aliases' => [
-                UserService::class => UserDoctrineService::class,
-                UserServiceInterface::class => UserService::class,
+                UserServiceInterface::class => UserServiceDoctrine::class,
                 'UserService' => UserServiceInterface::class,
                 TokenServiceInterface::class => TokenService::class,
                 'TokenService' => TokenServiceInterface::class,

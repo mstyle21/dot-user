@@ -170,7 +170,7 @@ class UserEntity /* extends Entity*/ implements
     /**
      * @return string
      */
-    public function getDateCreated(): string
+    public function getDateCreated():? \DateTime
     {
         return $this->dateCreated;
     }
@@ -178,7 +178,7 @@ class UserEntity /* extends Entity*/ implements
     /**
      * @param string $dateCreated
      */
-    public function setDateCreated(string $dateCreated): void
+    public function setDateCreated(\DateTime $dateCreated): void
     {
         $this->dateCreated = $dateCreated;
     }
@@ -214,7 +214,7 @@ class UserEntity /* extends Entity*/ implements
     public function jsonSerialize(): array
     {
         return [
-            'id' => $this->getId(),
+            'uuid' => $this->getUuid(),
             'username' => $this->getUsername(),
             'email' => $this->getEmail(),
             'password' => $this->getPassword(),
